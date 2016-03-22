@@ -109,12 +109,10 @@ void ofApp::draw(){
     for(int i=0; i<n; i++){
         ofPixels pix;
         pix.setFromExternalPixels(tm[i].tape, 1<<bits, 1<<bits, 3);
-        //int address = getAddress(tm[1-i]);
         ofImage img(pix);
-        //img.getPixelsRef().resize(ww/n, wh, OF_INTERPOLATE_NEAREST_NEIGHBOR);
+        //int address = getAddress(tm[1-i]);
         //img.setColor(address, ofColor(255));
-        img.update();
-        //img.setColor(address, ofColor(0,0,255));
+        //img.update();
         img.draw(ww/n*i,0,ww/n, wh);
     }
 }
@@ -144,9 +142,9 @@ void ofApp::keyPressed(int key){
         for(auto i = tm.begin(); i<tm.end(); i++)
             randomize_instruction(*i);
     }
-    if(key == 'p'){
-        print = !print;
-    }
+    //if(key == 't'){
+    //    print = !print;
+    //}
 }
 
 //--------------------------------------------------------------
