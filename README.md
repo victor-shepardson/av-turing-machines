@@ -21,8 +21,10 @@ you may need to alter the line 'ss.setDeviceID(...)' to grab the right audio dev
 
 
 # run
-press 'i' to randomize the current instruction
+press 'i' to randomize just current instruction (most interesting)
 
 press 'r' to randomize entire tapes
 
 press 'p' to randomize head positions
+
+press 's' to randomize TM states
