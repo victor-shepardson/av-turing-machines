@@ -28,3 +28,5 @@ press 'r' to randomize entire tapes
 press 'p' to randomize head positions
 
 press 's' to randomize TM states
+
+press 'z' to zero TM tapes (doesn't work quite right due to concurrency)
