@@ -97,6 +97,8 @@ void ofApp::setup(){
     ofSetMinMagFilters(GL_NEAREST, GL_NEAREST);
 
     ofSetFrameRate(60);
+
+    ofSetWindowShape(1024, 512);
 }
 
 void ofApp::close(){
