@@ -1,104 +1,84 @@
 #include "ofApp.h"
 
-//step the turing machine and return new symbol
-uint8_t ofApp::step(turing_machine &t){
-    auto result = delta(t);
-    t.state = get<0>(result);
-    t.tape[t.index] = get<1>(result);
-    t.index += (int32_t(get<2>(result)) - int32_t(1<<bits)/2)/jump_div;
-    t.index = (t.index + tape_length) % tape_length;
-    return t.tape[t.index];
-}
-//define the program
-tuple<uint8_t, uint8_t, uint8_t> ofApp::delta(turing_machine &t){
-    uint8_t new_state, new_symbol, jump;
-    int32_t address = getAddress(t);
-    //address %= program_length;
-    new_state = t.program[address];
-    new_symbol = t.program[address+1];
-    jump = t.program[address+2];
-    return make_tuple(new_state, new_symbol, jump);
-}
-
-//get address of instruction for current state
-int32_t ofApp::getAddress(turing_machine &t){
-    //return (t.state + (int32_t(t.tape[t.index])<<bits))<<1;
-    return 3*(t.tape[t.index] + (int32_t(t.state)<<bits));
-}
-
-uint8_t ofApp::random(){
-    uint8_t ret = rand();
-    return ret>>(8-bits);
-    //return ofRandom((1<<bits) + 1);
-}
-
-void ofApp::randomize_state(turing_machine &t){
-    t.state = random();
-}
-
-void ofApp::randomize_index(turing_machine &t){
-    uint32_t r = RAND_MAX * rand() + rand();
-    t.index = int32_t(r) % tape_length;
-}
-
-void ofApp::randomize_tape(turing_machine &t){
-    if(print) cout<<"randomizing tape: ";
-    for(int32_t i=0; i<tape_length; i++){
-        t.tape[i] = random();
-        if(print) cout<<t.tape[i];
-    }
-    if(print) cout<<endl;
-}
-
-void ofApp::randomize_instruction(turing_machine &t){
-    int32_t address = getAddress(t);
-    //address %= program_length;
-    t.program[address] = random();
-    t.program[address+1] = random();
-    t.program[address+2] = random();
-}
-
-void ofApp::zero_tape(turing_machine &t){
-    memset((void*)(t.tape), 0, tape_length*sizeof(uint8_t));
-}
-
-void ofApp::init(turing_machine &t){
-    t.tape = (uint8_t*)calloc(tape_length,sizeof(uint8_t));
-    t.state = 0;
-    t.index = 0;
-}
-
 void ofApp::audioOut(float * output, int32_t bufferSize, int32_t nChannels){
-    for(int32_t i=0; i<bufferSize; i++){
-        for(int32_t c=0; c<nChannels; c++){
-            output[nChannels*i+c] = float(step(tm[c]))/(1<<bits) - .5;;
+    int32_t n = tm.size();
+    if(nChannels == 1 && n>0){
+        for(int32_t i=0; i<bufferSize; i++){
+            output[i] = 0.;
+            for(int32_t j=0; j<n; j++){
+                output[i] += tm[j]->audioStep();
+            }
+            output[i]/=float(n);
         }
     }
+    else if(nChannels == 2 && n>1){
+        for(int32_t i=0; i<bufferSize; i++){
+            output[2*i] = 0.;
+            output[2*i+1] = 0.;
+            for(int32_t j=0; j<n; j++){
+                float v = tm[j]->audioStep();
+                float m = float(j)/(n-1);
+                output[2*i] += v*(1.-m);
+                output[2*i+1] += v*m;
+            }
+            output[2*i]*=2./float(n);
+            output[2*i+1]*=2./float(n);
+        }
+    }
+    else{
+        for(int32_t i=0; i<bufferSize; i++){
+            for(int32_t c=0; c<n; c++){
+                output[nChannels*i+c] = tm[c]->audioStep();
+            }
+            for(int32_t c=n; c<=nChannels; c++){
+                tm[c]->step();
+            }
+        }
+    }
+    if(recording)
+        recorder.addAudioSamples(output, bufferSize, nChannels);
 }
 
-//--------------------------------------------------------------
 void ofApp::setup(){
-    for(int32_t i=0; i<2; i++){
-        turing_machine t;
-        init(t);
-        tm.push_back(t);
-    }
-    tm[0].program = tm[1].tape;
-    tm[1].program = tm[0].tape;
 
-    int32_t channels = 2;
-    int32_t sample_rate = 48000;
+    ofxXmlSettings s;
+    s.loadFile(ofToDataPath("settings.xml"));
+
+    const int32_t n_machines = s.getValue("n_machines", 6);
+    const int32_t jump_div = s.getValue("jump_div", 16);
+    shape = s.getValue("shape", 0);
+    int32_t bits = s.getValue("bits", 8);
+    audio_sample_rate = s.getValue("audio_sample_rate", 48000);
+    video_frame_rate = s.getValue("video_frame_rate", 30);
+    audio_device = s.getValue("audio_device", 0);
+    audio_channels = s.getValue("audio_channels", 2);
+    record_width = s.getValue("record_width", 1920);
+    record_height = s.getValue("record_height", 1080);
+    ffmpeg_path = s.getValue("ffmpeg_path", "");
+
+    cout<<"constructing "<<n_machines<<" turing machines of "<<bits<<" bits"<<endl;
+
+    for(int32_t i=0; i<n_machines; i++){
+        tm.emplace_back(new ofxAVTuringMachine(bits, jump_div));
+    }
+    for(int32_t i=0; i<n_machines; i++){
+        tm[i]->program = tm[(i+1)%n_machines]->tape;
+        // tm[i]->program = tm[i]->tape;
+    }
+
     ofSoundStreamListDevices();
-    ss.setDeviceID(3);
-    ss.setup(this, channels, 0, sample_rate, 256, 4);
+    ss.setDeviceID(audio_device);
+    ss.setup(this, audio_channels, 0, audio_sample_rate, 256, 4);
+
+    ofSetFrameRate(video_frame_rate);
 
     print = false;
+    fullscreen = false;
+    recording = false;
 
-    ofSetMinMagFilters(GL_NEAREST, GL_NEAREST);
+    // readback_fbo.allocate(record_width, record_height, GL_RGB8);
 
-    ofSetFrameRate(60);
-
-    ofSetWindowShape(1024, 512);
+    ofSetWindowShape(n_machines*512>>shape, 512<<shape);
 }
 
 void ofApp::close(){
@@ -110,59 +90,100 @@ void ofApp::update(){
     stringstream ss;
     ss << ofGetFrameRate();
     ofSetWindowTitle(ss.str());
-   // int32_t s = step();
    if(print)
-        cout<<"symbol: "<<tm[0].tape[tm[0].index]<<", state: "<<tm[0].state<<endl;
+        cout<<"symbol: "<<tm[0]->tape[tm[0]->index]<<", state: "<<tm[0]->state<<endl;
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
     int32_t ww = ofGetWindowWidth(), wh = ofGetWindowHeight();
     int32_t n = tm.size();
+
+    ofPixels pix;
     for(int32_t i=0; i<n; i++){
-        ofPixels pix;
-        pix.setFromExternalPixels(tm[i].tape, 1<<bits, 1<<bits, 3);
-        ofImage img(pix);
-        //int32_t address = getAddress(tm[1-i]);
-        //img.setColor(address, ofColor(255));
-        //img.update();
-        img.draw(ww/n*i,0,ww/n, wh);
+        shared_ptr<ofPixels> tape = tm[i]->makePixels(shape);
+        if(!pix.isAllocated())
+            pix.allocate(tape->getWidth()*n, tape->getHeight(), 3);
+        tape->pasteInto(pix, tape->getWidth()*i, 0);
     }
+    ofImage img(pix);
+    img.getTexture().setTextureMinMagFilter(GL_NEAREST, GL_NEAREST);
+    img.draw(0,0,ww,wh);
+    if(recording){
+        recorder.addFrame(pix);
+    }
+}
+
+void ofApp::toggleVideoRecord(){
+    recording = !recording;
+    if(recording)
+        beginVideoRecord();
+    else
+        endVideoRecord();
+}
+
+void ofApp::beginVideoRecord(){
+    // stringstream bitrate;
+    // bitrate<<uint64_t(record_width*record_height*video_frame_rate*24/1000)<<"k";
+    // cout<<bitrate.str()<<endl;
+    // recorder.setVideoBitrate(bitrate.str());
+
+    if(ffmpeg_path == ""){
+        cout<<"error: ffmpeg path not set"<<endl;
+        recording = false;
+        return;
+    }
+
+    recorder.setFfmpegLocation(ffmpeg_path);
+
+    string fname = "av-turing-machines-"+ofGetTimestampString();
+
+    recorder.setup(fname, record_width, record_height, video_frame_rate, audio_sample_rate, audio_channels);
+
+    recorder.start();
+}
+
+void ofApp::endVideoRecord(){
+    recorder.close();
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int32_t key){
     if(key == 'z'){
         cout<<"zeroing tapes"<<endl;
-        for(auto i = tm.begin(); i<tm.end(); i++)
-            zero_tape(*i);
+        for(auto &i:tm)
+            i->zeroTape();
     }
     if(key == 'r'){
         cout<<"randomizing tapes"<<endl;
-        for(auto i = tm.begin(); i<tm.end(); i++)
-            randomize_tape(*i);
+        for(auto &i:tm)
+            i->randomizeTape();
     }
     if(key == 's'){
         cout<<"randomizing states: ";
-        for(auto i = tm.begin(); i<tm.end(); i++){
-            randomize_state(*i);
+        for(auto &i:tm){
+            i->randomizeState();
             cout<<i->state<<" "<<endl;
         }
     }
     if(key == 'p'){
         cout<<"randomizing indeces: ";
-        for(auto i = tm.begin(); i<tm.end(); i++){
-            randomize_index(*i);
+        for(auto &i:tm){
+            i->randomizeIndex();
             cout<<i->index<<" "<<endl;
         }
     }
     if(key == 'i'){
-        for(auto i = tm.begin(); i<tm.end(); i++)
-            randomize_instruction(*i);
+        for(auto &i:tm)
+            i->randomizeInstruction();
     }
-    //if(key == 't'){
-    //    print = !print;
-    //}
+    if(key == 'f'){
+        fullscreen = !fullscreen;
+        ofSetFullscreen(fullscreen);
+    }
+    if(key == 'v'){
+        toggleVideoRecord();
+    }
 }
 
 //--------------------------------------------------------------

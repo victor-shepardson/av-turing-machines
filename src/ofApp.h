@@ -1,6 +1,9 @@
 #pragma once
 
 #include "ofMain.h"
+#include "ofxXmlSettings.h"
+#include "ofxVideoRecorder.h"
+#include "ofxAVTuringMachine.h"
 
 class ofApp : public ofBaseApp{
 
@@ -21,31 +24,25 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
 
-        struct turing_machine{
-            uint8_t *tape;
-            uint8_t *program;
-            int32_t index;
-            uint8_t state;
-        };
+        void beginVideoRecord();
+        void endVideoRecord();
+        void toggleVideoRecord();
 
-        vector<turing_machine> tm;
+        bool recording;
 
-        uint8_t step(turing_machine &t);
-        tuple<uint8_t, uint8_t, uint8_t> delta(turing_machine &t);
-        int32_t getAddress(turing_machine &t);
-        void randomize_tape(turing_machine &t);
-        void randomize_instruction(turing_machine &t);
-        void randomize_state(turing_machine &t);
-        void randomize_index(turing_machine &t);
-        void zero_tape(turing_machine &t);
-        void init(turing_machine &t);
-        uint8_t random();
-        const int32_t bits = 8;
-        const int32_t tape_length = 3*(1<<(2*bits));
-        const int32_t jump_div = 1<<4;
-        //const int program_length = 1<<(2*bits+1);
+        vector<shared_ptr<ofxAVTuringMachine> > tm;
 
-        bool print;
+        string ffmpeg_path;
+        ofxVideoRecorder recorder;
+
+        ofFbo readback_fbo;
+
+        int32_t shape;
+        // int32_t bits;
+
+        int32_t audio_sample_rate, video_frame_rate, audio_channels, audio_device, record_width, record_height;
+
+        bool print, fullscreen;
 
         ofSoundStream ss;
 

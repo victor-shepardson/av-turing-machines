@@ -11,11 +11,9 @@ TMs run at 48kHz and symbol values are mapped from [0,127] to [-.5, .5] and sent
 
 
 # build
-oF 0.8.4, Win 7, Code::Blocks, C++11
+tested with oF 0.9.3, Win 7, msys2
 
-port to newer oF, different OS and IDE should be straightforward
-
-core logic is C++11 stdlib, port to different A/V framework should be simple
+core logic is just C++11 stdlib, port to different A/V framework should be simple
 
 you may need to alter the line 'ss.setDeviceID(...)' to grab the right audio device on your system
 

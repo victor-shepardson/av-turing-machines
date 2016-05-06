@@ -1,0 +1,3 @@
+ofxVideoRecorder
+ofxXmlSettings
+ofxAVTuringMachine
