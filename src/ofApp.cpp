@@ -62,8 +62,7 @@ void ofApp::setup(){
         tm.emplace_back(new ofxAVTuringMachine(bits, jump_div));
     }
     for(int32_t i=0; i<n_machines; i++){
-        tm[i]->program = tm[(i+1)%n_machines]->tape;
-        // tm[i]->program = tm[i]->tape;
+        tm[i]->setProgram(tm[(i+1)%n_machines]->getTape());
     }
 
     ofSoundStreamListDevices();
@@ -90,8 +89,6 @@ void ofApp::update(){
     stringstream ss;
     ss << ofGetFrameRate();
     ofSetWindowTitle(ss.str());
-   if(print)
-        cout<<"symbol: "<<tm[0]->tape[tm[0]->index]<<", state: "<<tm[0]->state<<endl;
 }
 
 //--------------------------------------------------------------

@@ -1,4 +1,5 @@
 bin/*
+!bin/data/
 obj/*
 *.layout
 *.depend

@@ -13,12 +13,10 @@ TMs run at 48kHz and symbol values are mapped from [0,127] to [-.5, .5] and sent
 # build
 tested with oF 0.9.3, Win 7, msys2
 
-core logic is just C++11 stdlib, port to different A/V framework should be simple
-
-you may need to alter the line 'ss.setDeviceID(...)' to grab the right audio device on your system
-
-
 # run
+
+set the audio device in bin/data/settings.xml
+
 press 'i' to randomize just current instruction (most interesting)
 
 press 'r' to randomize entire tapes
