@@ -1,14 +1,14 @@
-<n_machines>6</n_machines>
+<n_machines>9</n_machines>
 <bits>8</bits>
 <jump_div>16</jump_div>
 <shape>1</shape>
 
 <audio_channels>2</audio_channels>
 <audio_sample_rate>48000</audio_sample_rate>
-<audio_device>3</audio_device>
+<audio_device>0</audio_device>
 
 <video_frame_rate>30</video_frame_rate>
-<record_width>1920</record_width>
-<record_height>1080</record_height>
+<record_width>3240</record_width>
+<record_height>1920</record_height>
 
 <ffmpeg_path>"C:\Program Files (x86)\ffmpeg\bin\ffmpeg.exe"</ffmpeg_path>

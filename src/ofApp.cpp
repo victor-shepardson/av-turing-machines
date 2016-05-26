@@ -1,6 +1,10 @@
 #include "ofApp.h"
 
-void ofApp::audioOut(float * output, int32_t bufferSize, int32_t nChannels){
+void ofApp::audioOutAsync(float * output, int32_t bufferSize, int32_t nChannels){
+    if(queued_key >= 0){
+        handleKey(queued_key);
+        queued_key = -1;
+    }
     int32_t n = tm.size();
     if(nChannels == 1 && n>0){
         for(int32_t i=0; i<bufferSize; i++){
@@ -39,7 +43,71 @@ void ofApp::audioOut(float * output, int32_t bufferSize, int32_t nChannels){
         recorder.addAudioSamples(output, bufferSize, nChannels);
 }
 
+void ofApp::audioOut(float * output, int32_t bufferSize, int32_t nChannels){
+    if(queued_key >= 0){
+        handleKey(queued_key);
+        queued_key = -1;
+    }
+    int32_t n = tm.size();
+    if(nChannels == 1 && n>0){
+        for(int32_t i=0; i<bufferSize; i++){
+            output[i] = 0.;
+            for(auto &i:tm){
+                i->tick();
+            }
+            for(int32_t j=0; j<n; j++){
+                output[i] += tm[j]->audioTock();
+            }
+            output[i]/=float(n);
+        }
+    }
+    else if(nChannels == 2 && n>1){
+        for(int32_t i=0; i<bufferSize; i++){
+            output[2*i] = 0.;
+            output[2*i+1] = 0.;
+            for(auto &i:tm){
+                i->tick();
+            }       
+            for(int32_t j=0; j<n; j++){
+                float v = tm[j]->audioTock();
+                float m = float(j)/(n-1);
+                output[2*i] += v*(1.-m);
+                output[2*i+1] += v*m;
+            }
+            output[2*i]*=2./float(n);
+            output[2*i+1]*=2./float(n);
+        }
+    }
+    else{
+        for(int32_t i=0; i<bufferSize; i++){
+            for(auto &i:tm){
+                i->tick();
+            }
+            for(int32_t c=0; c<n; c++){
+                output[nChannels*i+c] = tm[c]->audioTock();
+            }
+            for(int32_t c=n; c<=nChannels; c++){
+                tm[c]->tock();
+            }
+        }
+    }
+    if(recording)
+        recorder.addAudioSamples(output, bufferSize, nChannels);
+}
+
 void ofApp::setup(){
+
+    queued_key = -1;
+
+    presets.push_back("2016-05-18-15-50-01-479.xml");
+    presets.push_back("2016-05-18-16-08-06-423.xml");
+    presets.push_back("2016-05-18-16-09-17-812.xml");
+    presets.push_back("2016-05-18-16-10-48-812.xml");
+    presets.push_back("2016-05-18-16-13-02-036.xml");
+    presets.push_back("2016-05-18-16-20-59-081.xml");
+    presets.push_back("2016-05-18-16-21-36-716.xml");
+    presets.push_back("2016-05-18-16-23-14-430.xml");
+    presets.push_back("2016-05-18-16-23-27-863.xml");
 
     ofxXmlSettings s;
     s.loadFile(ofToDataPath("settings.xml"));
@@ -74,6 +142,7 @@ void ofApp::setup(){
     print = false;
     fullscreen = false;
     recording = false;
+    save_init = false;
 
     // readback_fbo.allocate(record_width, record_height, GL_RGB8);
 
@@ -146,33 +215,113 @@ void ofApp::endVideoRecord(){
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int32_t key){
-    if(key == 'z'){
+    queued_key = key;
+}
+
+void ofApp::handleKey(int32_t key){
+    if(key>='1' && key <= '9'){
+        tm[key-49]->randomizeInstruction();
+    }
+    // if(key>='1' && key <= '9'){
+    //     int32_t k = key - 49;
+    //     string path = presets[k];
+    //     ofXml x(path);
+    //     x.setTo("init");
+    //     int idx = 0;
+    //     // mutex.lock();
+    //     for(auto &i:tm){
+    //         i->zeroTape();
+    //         i->index = 0;
+    //         i->state = 0;
+    //         uint8_t state, symbol, jump;
+    //         x.setToChild(idx);
+    //         state = x.getIntValue("state");
+    //         symbol = x.getIntValue("symbol");
+    //         jump = x.getIntValue("jump");
+    //         i->setCurrentInstruction(make_tuple(state, symbol, jump));
+    //         idx++;
+    //         x.setToParent();   
+    //     }
+    //     // mutex.unlock();
+    // }
+    if(key == 'z' || key == '0'){
         cout<<"zeroing tapes"<<endl;
-        for(auto &i:tm)
+        // mutex.lock();
+        for(auto &i:tm){
             i->zeroTape();
+            i->index = 0;
+            i->state = 0;
+        }
+        // mutex.unlock();
+    }
+    if(key==8){
+        for(auto &i:tm){
+            i->index = 0;
+        }
+    }
+    if(key=='.'){
+        for(auto &i:tm){
+            i->state = 0;
+        }
     }
     if(key == 'r'){
         cout<<"randomizing tapes"<<endl;
         for(auto &i:tm)
             i->randomizeTape();
     }
-    if(key == 's'){
+    if(key == 's' || key == '*'){
         cout<<"randomizing states: ";
         for(auto &i:tm){
             i->randomizeState();
             cout<<i->state<<" "<<endl;
         }
     }
-    if(key == 'p'){
+    if(key == 'p' || key == '/'){
         cout<<"randomizing indeces: ";
         for(auto &i:tm){
             i->randomizeIndex();
             cout<<i->index<<" "<<endl;
         }
     }
-    if(key == 'i'){
-        for(auto &i:tm)
+    if(key == 'i' || key == 13){
+        // cout<<"-------------"<<endl;
+
+        ofXml x;
+        if(save_init){
+            x.addChild("init");
+            x.setTo("init");
+        }
+        int idx = 0;
+        // mutex.lock();
+        for(auto &i:tm){
+            i->zeroTape();
+            i->index = 0;
+            i->state = 0;
+        }
+        for(auto &i:tm){
             i->randomizeInstruction();
+            if(save_init){
+                auto instruction = i->delta();
+                x.addChild("tm");
+                x.setToChild(idx);
+                // x.setAttribute("state", ofToString(int(get<0>(instruction))));
+                // x.setAttribute("symbol", ofToString(int(get<1>(instruction))));
+                // x.setAttribute("jump", ofToString(int(get<2>(instruction))));
+                x.addValue("state", int(get<0>(instruction)));
+                x.addValue("symbol", int(get<1>(instruction)));
+                x.addValue("jump", int(get<2>(instruction)));
+                idx++;
+                x.setToParent();
+            }
+       }
+       // mutex.unlock();
+       if(save_init)
+            x.save(ofGetTimestampString()+".xml");
+    }
+    if(key == '+'){
+        for(auto &i:tm){
+            i->randomizeInstruction();
+        }
     }
     if(key == 'f'){
         fullscreen = !fullscreen;
