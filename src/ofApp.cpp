@@ -118,6 +118,7 @@ void ofApp::setup(){
     record_height = s.getValue("record_height", 1080);
     ffmpeg_path = s.getValue("ffmpeg_path", "");
     audio_thread_input_handling = s.getValue("audio_thread_input_handling", 0);
+    save_init = s.getValue("save_init", 0);
 
     int32_t n_presets = s.getNumTags("preset");
     cout<<"found "<<n_presets<<" presets:"<<endl;
@@ -145,7 +146,6 @@ void ofApp::setup(){
     print = false;
     fullscreen = false;
     recording = false;
-    save_init = false;
 
     // readback_fbo.allocate(record_width, record_height, GL_RGB8);
 
@@ -292,11 +292,8 @@ void ofApp::handleKey(int32_t key){
             x.setTo("init");
         }
         int idx = 0;
-        // mutex.lock();
         for(auto &i:tm){
-            i->zeroTape();
-            i->index = 0;
-            i->state = 0;
+            i->reset();
         }
         for(auto &i:tm){
             i->randomizeInstruction();
@@ -304,9 +301,6 @@ void ofApp::handleKey(int32_t key){
                 auto instruction = i->delta();
                 x.addChild("tm");
                 x.setToChild(idx);
-                // x.setAttribute("state", ofToString(int(get<0>(instruction))));
-                // x.setAttribute("symbol", ofToString(int(get<1>(instruction))));
-                // x.setAttribute("jump", ofToString(int(get<2>(instruction))));
                 x.addValue("state", int(get<0>(instruction)));
                 x.addValue("symbol", int(get<1>(instruction)));
                 x.addValue("jump", int(get<2>(instruction)));
@@ -314,7 +308,6 @@ void ofApp::handleKey(int32_t key){
                 x.setToParent();
             }
        }
-       // mutex.unlock();
        if(save_init)
             x.save(ofGetTimestampString()+".xml");
     }

@@ -1,6 +1,6 @@
 <n_machines>6</n_machines>
 <bits>8</bits>
-<jump_div>16</jump_div>
+<jump_div>1</jump_div>
 <shape>1</shape>
 
 <audio_channels>2</audio_channels>
@@ -8,6 +8,7 @@
 <audio_device>0</audio_device>
 
 <audio_thread_input_handling>0</audio_thread_input_handling>
+<save_init>0</save_init>
 
 <video_frame_rate>30</video_frame_rate>
 <record_width>3240</record_width>
@@ -15,7 +16,7 @@
 
 <ffmpeg_path>"C:\Program Files (x86)\ffmpeg\bin\ffmpeg.exe"</ffmpeg_path>
 
-<preset>2016-05-18-15-50-01-479.xml</preset>
+<preset>2016-05-26-18-33-08-996.xml</preset>
 <preset>2016-05-18-16-08-06-423.xml</preset>
 <preset>2016-05-18-16-09-17-812.xml</preset>
 <preset>2016-05-18-16-10-48-812.xml</preset>

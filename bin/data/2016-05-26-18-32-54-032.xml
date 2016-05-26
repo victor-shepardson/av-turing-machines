@@ -1,0 +1,32 @@
+<init>
+	<tm>
+		<state>119</state>
+		<symbol>74</symbol>
+		<jump>145</jump>
+	</tm>
+	<tm>
+		<state>233</state>
+		<symbol>5</symbol>
+		<jump>54</jump>
+	</tm>
+	<tm>
+		<state>65</state>
+		<symbol>186</symbol>
+		<jump>51</jump>
+	</tm>
+	<tm>
+		<state>6</state>
+		<symbol>3</symbol>
+		<jump>27</jump>
+	</tm>
+	<tm>
+		<state>87</state>
+		<symbol>5</symbol>
+		<jump>6</jump>
+	</tm>
+	<tm>
+		<state>84</state>
+		<symbol>42</symbol>
+		<jump>88</jump>
+	</tm>
+</init>
