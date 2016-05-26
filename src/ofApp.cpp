@@ -49,6 +49,7 @@ void ofApp::audioOut(float * output, int32_t bufferSize, int32_t nChannels){
         queued_key = -1;
     }
     int32_t n = tm.size();
+    //if one channel, sum all tms to mono
     if(nChannels == 1 && n>0){
         for(int32_t i=0; i<bufferSize; i++){
             output[i] = 0.;
@@ -61,6 +62,7 @@ void ofApp::audioOut(float * output, int32_t bufferSize, int32_t nChannels){
             output[i]/=float(n);
         }
     }
+    //if two channels, spread all tms across stereo field
     else if(nChannels == 2 && n>1){
         for(int32_t i=0; i<bufferSize; i++){
             output[2*i] = 0.;
@@ -78,15 +80,17 @@ void ofApp::audioOut(float * output, int32_t bufferSize, int32_t nChannels){
             output[2*i+1]*=2./float(n);
         }
     }
+    //if n>2 channels, put the first n tms each in a channel
     else{
         for(int32_t i=0; i<bufferSize; i++){
             for(auto &i:tm){
                 i->tick();
             }
-            for(int32_t c=0; c<n; c++){
+            for(int32_t c=0; c<n && c<nChannels; c++){
                 output[nChannels*i+c] = tm[c]->audioTock();
             }
-            for(int32_t c=n; c<=nChannels; c++){
+            for(int32_t c=nChannels; c<n; c++){
+                //if there are more tms than channels, update the rest
                 tm[c]->tock();
             }
         }
@@ -98,16 +102,6 @@ void ofApp::audioOut(float * output, int32_t bufferSize, int32_t nChannels){
 void ofApp::setup(){
 
     queued_key = -1;
-
-    presets.push_back("2016-05-18-15-50-01-479.xml");
-    presets.push_back("2016-05-18-16-08-06-423.xml");
-    presets.push_back("2016-05-18-16-09-17-812.xml");
-    presets.push_back("2016-05-18-16-10-48-812.xml");
-    presets.push_back("2016-05-18-16-13-02-036.xml");
-    presets.push_back("2016-05-18-16-20-59-081.xml");
-    presets.push_back("2016-05-18-16-21-36-716.xml");
-    presets.push_back("2016-05-18-16-23-14-430.xml");
-    presets.push_back("2016-05-18-16-23-27-863.xml");
 
     ofxXmlSettings s;
     s.loadFile(ofToDataPath("settings.xml"));
@@ -123,6 +117,15 @@ void ofApp::setup(){
     record_width = s.getValue("record_width", 1920);
     record_height = s.getValue("record_height", 1080);
     ffmpeg_path = s.getValue("ffmpeg_path", "");
+    audio_thread_input_handling = s.getValue("audio_thread_input_handling", 0);
+
+    int32_t n_presets = s.getNumTags("preset");
+    cout<<"found "<<n_presets<<" presets:"<<endl;
+    for(int32_t i=0; i<n_presets; i++){
+        string preset_path = s.getValue("preset", "", i);
+        cout<<preset_path<<endl;
+        presets.push_back(preset_path);
+    }
 
     cout<<"constructing "<<n_machines<<" turing machines of "<<bits<<" bits"<<endl;
 
@@ -215,44 +218,41 @@ void ofApp::endVideoRecord(){
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int32_t key){
-    queued_key = key;
+    if(audio_thread_input_handling)
+        queued_key = key;
+    else
+        handleKey(key);
 }
 
 void ofApp::handleKey(int32_t key){
-    if(key>='1' && key <= '9'){
-        tm[key-49]->randomizeInstruction();
-    }
     // if(key>='1' && key <= '9'){
-    //     int32_t k = key - 49;
-    //     string path = presets[k];
-    //     ofXml x(path);
-    //     x.setTo("init");
-    //     int idx = 0;
-    //     // mutex.lock();
-    //     for(auto &i:tm){
-    //         i->zeroTape();
-    //         i->index = 0;
-    //         i->state = 0;
-    //         uint8_t state, symbol, jump;
-    //         x.setToChild(idx);
-    //         state = x.getIntValue("state");
-    //         symbol = x.getIntValue("symbol");
-    //         jump = x.getIntValue("jump");
-    //         i->setCurrentInstruction(make_tuple(state, symbol, jump));
-    //         idx++;
-    //         x.setToParent();   
-    //     }
-    //     // mutex.unlock();
+    //     tm[key-49]->randomizeInstruction();
     // }
+    if(key>='1' && key <= '9'){
+        int32_t k = key - 49;
+        string path = presets[k];
+        ofXml x(path);
+        x.setTo("init");
+        int idx = 0;
+        for(auto &i:tm){
+            i->reset();
+        }
+        for(auto &i:tm){
+            uint8_t state, symbol, jump;
+            x.setToChild(idx);
+            state = x.getIntValue("state");
+            symbol = x.getIntValue("symbol");
+            jump = x.getIntValue("jump");
+            i->setCurrentInstruction(make_tuple(state, symbol, jump));
+            idx++;
+            x.setToParent();   
+        }
+    }
     if(key == 'z' || key == '0'){
         cout<<"zeroing tapes"<<endl;
-        // mutex.lock();
         for(auto &i:tm){
-            i->zeroTape();
-            i->index = 0;
-            i->state = 0;
+            i->reset();
         }
-        // mutex.unlock();
     }
     if(key==8){
         for(auto &i:tm){

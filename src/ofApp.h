@@ -49,7 +49,7 @@ public:
 
 	int32_t audio_sample_rate, video_frame_rate, audio_channels, audio_device, record_width, record_height;
 
-	bool print, fullscreen, save_init;
+	bool print, fullscreen, save_init, audio_thread_input_handling;
 
 	ofSoundStream ss;
 

@@ -1,4 +1,4 @@
-<n_machines>9</n_machines>
+<n_machines>6</n_machines>
 <bits>8</bits>
 <jump_div>16</jump_div>
 <shape>1</shape>
@@ -7,8 +7,20 @@
 <audio_sample_rate>48000</audio_sample_rate>
 <audio_device>0</audio_device>
 
+<audio_thread_input_handling>0</audio_thread_input_handling>
+
 <video_frame_rate>30</video_frame_rate>
 <record_width>3240</record_width>
 <record_height>1920</record_height>
 
 <ffmpeg_path>"C:\Program Files (x86)\ffmpeg\bin\ffmpeg.exe"</ffmpeg_path>
+
+<preset>2016-05-18-15-50-01-479.xml</preset>
+<preset>2016-05-18-16-08-06-423.xml</preset>
+<preset>2016-05-18-16-09-17-812.xml</preset>
+<preset>2016-05-18-16-10-48-812.xml</preset>
+<preset>2016-05-18-16-13-02-036.xml</preset>
+<preset>2016-05-18-16-20-59-081.xml</preset>
+<preset>2016-05-18-16-21-36-716.xml</preset>
+<preset>2016-05-18-16-23-14-430.xml</preset>
+<preset>2016-05-18-16-23-27-863.xml</preset>
